@@ -21,6 +21,7 @@ import org.gradle.language.base.plugins.LifecycleBasePlugin.CHECK_TASK_NAME
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.io.File
 
+
 const val GROUP_VERIFICATION = "verification"
 
 class CodeQualityToolsPlugin : Plugin<Project> {
@@ -350,9 +351,8 @@ fun Project.addErrorProne(extension: CodeQualityToolsPluginExtension): Boolean {
 
   if (isNotIgnored && isEnabled && isErrorProneSupported) {
     plugins.apply("net.ltgt.errorprone")
-    configurations.getByName("errorprone").resolutionStrategy.force("com.google.errorprone:error_prone_core:${extension.errorProne.toolVersion}")
-    configurations.getByName("errorproneJavac").resolutionStrategy.force("com.google.errorprone:javac:9+181-r4173-1")
-
+    dependencies.add("errorprone", "com.google.errorprone:error_prone_core:2.3.3")
+    dependencies.add("errorproneJavac", "com.google.errorprone:javac:9+181-r4173-1")
     return true
   }
 
