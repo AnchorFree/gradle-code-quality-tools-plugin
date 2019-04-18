@@ -30,14 +30,14 @@ class CodeQualityToolsPlugin : Plugin<Project> {
     val hasSubProjects = target.subprojects.size > 0
 
     if (hasSubProjects) {
-      target.subprojects { subProject ->
+      target.subprojects.forEach { subProject ->
         subProject.afterEvaluate {
-          addCodeQualityTools(it, target, extension)
+          addCodeQualityTools(this, target, extension)
         }
       }
     } else {
       target.afterEvaluate {
-        addCodeQualityTools(it, target, extension)
+        addCodeQualityTools(this, target, extension)
       }
     }
   }
@@ -60,11 +60,13 @@ fun androidGradlePluginVersion(): Revision {
 
   try {
     return Revision.parseRevision(Class.forName("com.android.builder.Version").getDeclaredField("ANDROID_GRADLE_PLUGIN_VERSION").get(o).toString(), Revision.Precision.PREVIEW)
-  } catch (ignored: Exception) {}
+  } catch (ignored: Exception) {
+  }
 
   try {
     return Revision.parseRevision(Class.forName("com.android.builder.model.Version").getDeclaredField("ANDROID_GRADLE_PLUGIN_VERSION").get(o).toString(), Revision.Precision.PREVIEW)
-  } catch (ignored: Exception) {}
+  } catch (ignored: Exception) {
+  }
 
   throw IllegalArgumentException("Can't get Android Gradle Plugin version")
 }
@@ -91,26 +93,26 @@ fun Project.addPmd(rootProject: Project, extension: CodeQualityToolsPluginExtens
     plugins.apply(PmdPlugin::class.java)
 
     extensions.configure(PmdExtension::class.java) {
-      it.toolVersion = extension.pmd.toolVersion
-      it.isIgnoreFailures = extension.pmd.ignoreFailures ?: !extension.failEarly
-      it.ruleSetFiles = files(rootProject.file(extension.pmd.ruleSetFile))
+      toolVersion = extension.pmd.toolVersion
+      isIgnoreFailures = extension.pmd.ignoreFailures ?: !extension.failEarly
+      ruleSetFiles = files(rootProject.file(extension.pmd.ruleSetFile))
     }
 
     tasks.register("pmd", Pmd::class.java) {
-      it.description = "Runs pmd."
-      it.group = GROUP_VERIFICATION
+      description = "Runs pmd."
+      group = GROUP_VERIFICATION
 
-      it.ruleSets = emptyList()
+      ruleSets = emptyList()
 
-      it.source = fileTree(extension.pmd.source)
-      it.include(extension.pmd.include)
-      it.exclude(extension.pmd.exclude)
+      source = fileTree(extension.pmd.source)
+      include(extension.pmd.include)
+      exclude(extension.pmd.exclude)
 
-      it.reports.html.isEnabled = extension.htmlReports
-      it.reports.xml.isEnabled = extension.xmlReports
+      reports.html.isEnabled = extension.htmlReports
+      reports.xml.isEnabled = extension.xmlReports
     }
 
-    tasks.named(CHECK_TASK_NAME).configure { it.dependsOn("pmd") }
+    tasks.named(CHECK_TASK_NAME).configure { dependsOn("pmd") }
     return true
   }
 
@@ -126,34 +128,35 @@ fun Project.addCheckstyle(rootProject: Project, extension: CodeQualityToolsPlugi
     plugins.apply(CheckstylePlugin::class.java)
 
     extensions.configure(CheckstyleExtension::class.java) {
-      it.toolVersion = extension.checkstyle.toolVersion
-      it.configFile = rootProject.file(extension.checkstyle.configFile)
-      it.isIgnoreFailures = extension.checkstyle.ignoreFailures ?: !extension.failEarly
-      it.isShowViolations = extension.checkstyle.showViolations ?: extension.failEarly
+      toolVersion = extension.checkstyle.toolVersion
+      configFile = rootProject.file(extension.checkstyle.configFile)
+      isIgnoreFailures = extension.checkstyle.ignoreFailures ?: !extension.failEarly
+      isShowViolations = extension.checkstyle.showViolations ?: extension.failEarly
     }
 
     tasks.register("checkstyle", Checkstyle::class.java) {
-      it.description = "Runs checkstyle."
-      it.group = GROUP_VERIFICATION
+      description = "Runs checkstyle."
+      group = GROUP_VERIFICATION
 
-      it.source = fileTree(extension.checkstyle.source)
-      it.include(extension.checkstyle.include)
-      it.exclude(extension.checkstyle.exclude)
+      source = fileTree(extension.checkstyle.source)
+      include(extension.checkstyle.include)
+      exclude(extension.checkstyle.exclude)
 
-      it.classpath = files()
+      classpath = files()
 
-      it.reports.html.isEnabled = extension.htmlReports
-      it.reports.xml.isEnabled = extension.xmlReports
+      reports.html.isEnabled = extension.htmlReports
+      reports.xml.isEnabled = extension.xmlReports
     }
 
-    tasks.named(CHECK_TASK_NAME).configure { it.dependsOn("checkstyle") }
+    tasks.named(CHECK_TASK_NAME).configure { dependsOn("checkstyle") }
     return true
   }
 
   return false
 }
 
-@Suppress("Detekt.ComplexMethod") fun Project.addLint(extension: CodeQualityToolsPluginExtension): Boolean {
+@Suppress("Detekt.ComplexMethod")
+fun Project.addLint(extension: CodeQualityToolsPluginExtension): Boolean {
   val isNotIgnored = !shouldIgnore(extension)
   val isEnabled = extension.lint.enabled
   val isAndroidProject = isAndroidProject()
@@ -206,7 +209,7 @@ fun Project.addCheckstyle(rootProject: Project, extension: CodeQualityToolsPlugi
         lintOptions.textOutput(extension.lint.textOutput)
       }
 
-      tasks.named(CHECK_TASK_NAME).configure { it.dependsOn("lint") }
+      tasks.named(CHECK_TASK_NAME).configure { dependsOn("lint") }
       return true
     }
   }
@@ -220,7 +223,7 @@ fun Project.addKotlin(extension: CodeQualityToolsPluginExtension): Boolean {
 
   if (isNotIgnored && isKotlinProject) {
     project.tasks.withType(KotlinCompile::class.java) {
-      it.kotlinOptions.allWarningsAsErrors = extension.kotlin.allWarningsAsErrors
+      kotlinOptions.allWarningsAsErrors = extension.kotlin.allWarningsAsErrors
     }
     return true
   }
@@ -228,8 +231,11 @@ fun Project.addKotlin(extension: CodeQualityToolsPluginExtension): Boolean {
   return false
 }
 
+private const val REPORT_KTLINT = "reports/ktlint/"
+
 fun Project.addKtlint(rootProject: Project, extension: CodeQualityToolsPluginExtension): Boolean {
   val isNotIgnored = !shouldIgnore(extension)
+
   val isEnabled = extension.ktlint.enabled
   val isKtlintSupported = isKotlinProject()
 
@@ -237,24 +243,31 @@ fun Project.addKtlint(rootProject: Project, extension: CodeQualityToolsPluginExt
     val ktlint = "ktlint"
 
     configurations.create(ktlint).defaultDependencies {
-      it.add(dependencies.create("com.github.shyiko:ktlint:${extension.ktlint.toolVersion}"))
+      add(dependencies.create("com.github.shyiko:ktlint:${extension.ktlint.toolVersion}"))
     }
 
-    tasks.register(ktlint, KtLintTask::class.java) { task ->
-      task.experimental = extension.ktlint.experimental
-      task.version = extension.ktlint.toolVersion
-      task.outputDirectory = File(buildDir, "reports/ktlint/")
-      task.inputs.files(kotlinFiles(), rootProject.editorconfigFiles())
+    tasks.register(ktlint, KtLintTask::class.java) {
+      experimental = extension.ktlint.experimental
+      version = extension.ktlint.toolVersion
+      outputDirectory = File(buildDir, REPORT_KTLINT)
+      inputs.files(kotlinFiles(), rootProject.editorconfigFiles())
     }
 
-    tasks.register("ktlintFormat", KtLintFormatTask::class.java) { task ->
-      task.experimental = extension.ktlint.experimental
-      task.version = extension.ktlint.toolVersion
-      task.outputDirectory = File(buildDir, "reports/ktlint/")
-      task.inputs.files(kotlinFiles(), rootProject.editorconfigFiles())
+    tasks.register(ktlint, KtLintTask::class.java) {
+      experimental = extension.ktlint.experimental
+      version = extension.ktlint.toolVersion
+      outputDirectory = File(buildDir, REPORT_KTLINT)
+      inputs.files(kotlinFiles(), rootProject.editorconfigFiles())
     }
 
-    tasks.named(CHECK_TASK_NAME).configure { it.dependsOn(ktlint) }
+    tasks.register("ktlintFormat", KtLintFormatTask::class.java) {
+      experimental = extension.ktlint.experimental
+      version = extension.ktlint.toolVersion
+      outputDirectory = File(buildDir, REPORT_KTLINT)
+      inputs.files(kotlinFiles(), rootProject.editorconfigFiles())
+    }
+
+    tasks.named(CHECK_TASK_NAME).configure { dependsOn(ktlint) }
     return true
   }
 
@@ -270,25 +283,25 @@ fun Project.addCpd(extension: CodeQualityToolsPluginExtension): Boolean {
     plugins.apply(CpdPlugin::class.java)
 
     extensions.configure(CpdExtension::class.java) {
-      it.language = extension.cpd.language
-      it.toolVersion = extension.pmd.toolVersion
-      it.ignoreFailures = extension.cpd.ignoreFailures ?: !extension.failEarly
-      it.minimumTokenCount = extension.cpd.minimumTokenCount
+      language = extension.cpd.language
+      toolVersion = extension.pmd.toolVersion
+      ignoreFailures = extension.cpd.ignoreFailures ?: !extension.failEarly
+      minimumTokenCount = extension.cpd.minimumTokenCount
     }
 
     // CPD Plugin already creates the task so we'll just reconfigure it.
     tasks.named("cpdCheck", Cpd::class.java) {
-      it.description = "Runs cpd."
-      it.group = GROUP_VERIFICATION
+      description = "Runs cpd."
+      group = GROUP_VERIFICATION
 
-      it.reports.text.isEnabled = extension.textReports
-      it.reports.xml.isEnabled = extension.xmlReports
+      reports.text.isEnabled = extension.textReports
+      reports.xml.isEnabled = extension.xmlReports
 
-      it.encoding = "UTF-8"
-      it.source = fileTree(extension.cpd.source).filter { it.name.endsWith(".${extension.cpd.language}") }.asFileTree
+      encoding = "UTF-8"
+      source = fileTree(extension.cpd.source).filter { it.name.endsWith(".${extension.cpd.language}") }.asFileTree
     }
 
-    tasks.named(CHECK_TASK_NAME).configure { it.dependsOn("cpdCheck") }
+    tasks.named(CHECK_TASK_NAME).configure { dependsOn("cpdCheck") }
     return true
   }
 
@@ -302,26 +315,26 @@ fun Project.addDetekt(rootProject: Project, extension: CodeQualityToolsPluginExt
 
   if (isNotIgnored && isEnabled && isDetektSupported) {
     configurations.create("detekt").defaultDependencies {
-      it.add(dependencies.create("io.gitlab.arturbosch.detekt:detekt-cli:${extension.detekt.toolVersion}"))
+      add(dependencies.create("io.gitlab.arturbosch.detekt:detekt-cli:${extension.detekt.toolVersion}"))
     }
 
-    tasks.register("detektCheck", DetektCheckTask::class.java) { task ->
-      task.failFast = extension.detekt.failFast
-      task.version = extension.detekt.toolVersion
-      task.outputDirectory = File(buildDir, "reports/detekt/")
-      task.configFile = rootProject.file(extension.detekt.config)
-      task.inputs.files(kotlinFiles())
+    tasks.register("detektCheck", DetektCheckTask::class.java) {
+      failFast = extension.detekt.failFast
+      version = extension.detekt.toolVersion
+      outputDirectory = File(buildDir, "reports/detekt/")
+      configFile = rootProject.file(extension.detekt.config)
+      inputs.files(kotlinFiles())
 
-      task.inputs.property("baseline-file-exists", false)
+      inputs.property("baseline-file-exists", false)
 
       extension.detekt.baselineFileName?.let {
         val file = file(it)
-        task.baselineFilePath = file.toString()
-        task.inputs.property("baseline-file-exists", file.exists())
+        baselineFilePath = file.toString()
+        inputs.property("baseline-file-exists", file.exists())
       }
     }
 
-    tasks.named(CHECK_TASK_NAME).configure { it.dependsOn("detektCheck") }
+    tasks.named(CHECK_TASK_NAME).configure { dependsOn("detektCheck") }
     return true
   }
 
@@ -338,6 +351,7 @@ fun Project.addErrorProne(extension: CodeQualityToolsPluginExtension): Boolean {
   if (isNotIgnored && isEnabled && isErrorProneSupported) {
     plugins.apply("net.ltgt.errorprone")
     configurations.getByName("errorprone").resolutionStrategy.force("com.google.errorprone:error_prone_core:${extension.errorProne.toolVersion}")
+    configurations.getByName("errorproneJavac").resolutionStrategy.force("com.google.errorprone:javac:9+181-r4173-1")
 
     return true
   }

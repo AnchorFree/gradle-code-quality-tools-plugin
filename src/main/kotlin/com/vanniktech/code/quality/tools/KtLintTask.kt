@@ -20,13 +20,13 @@ import java.io.File
   }
 
   @TaskAction fun run() {
-    project.javaexec { task ->
-      task.main = "com.github.shyiko.ktlint.Main"
-      task.classpath = project.configurations.getByName("ktlint")
+    project.javaexec {
+      main = "com.github.shyiko.ktlint.Main"
+      classpath = project.configurations.getByName("ktlint")
       if (experimental) {
-        task.args("--experimental")
+        args("--experimental")
       }
-      task.args("--reporter=plain", "--reporter=checkstyle,output=${File(outputDirectory, "ktlint-checkstyle-report.xml")}", "**/*.kt", "**/*.kts", "!build/")
+      args("--reporter=plain", "--reporter=checkstyle,output=${File(outputDirectory, "ktlint-checkstyle-report.xml")}", "**/*.kt", "**/*.kts", "!build/")
     }
   }
 }

@@ -16,21 +16,31 @@ import org.gradle.api.tasks.TaskExecutionException
 import org.gradle.util.VersionNumber
 import java.io.File
 
-@CacheableTask open class DetektCheckTask : DefaultTask() {
-  @Input var failFast: Boolean = true
-  @Input lateinit var version: String
+@CacheableTask
+open class DetektCheckTask : DefaultTask() {
+  @Input
+  var failFast: Boolean = true
+  @Input
+  lateinit var version: String
 
   // Ideally this would be an optional input file - https://github.com/gradle/gradle/issues/2016
-  @Input @Optional var baselineFilePath: String? = null
-  @InputFile @PathSensitive(RELATIVE) lateinit var configFile: File
-  @OutputDirectory @PathSensitive(NONE) lateinit var outputDirectory: File
+  @Input
+  @Optional
+  var baselineFilePath: String? = null
+  @InputFile
+  @PathSensitive(RELATIVE)
+  lateinit var configFile: File
+  @OutputDirectory
+  @PathSensitive(NONE)
+  lateinit var outputDirectory: File
 
   init {
     group = "verification"
     description = "Runs detekt."
   }
 
-  @TaskAction fun run() {
+  @TaskAction
+  fun run() {
     val configuration = project.configurations.getByName("detekt")
 
     baselineFilePath?.let { file ->
@@ -55,9 +65,9 @@ import java.io.File
     val reportKey = if (shouldUseReport) "--report" else "--output"
     val reportValue = if (shouldUseReport) {
       listOf(
-          ReportingMetaInformation("plain", "txt", "plain"),
-          ReportingMetaInformation("xml", "xml", "checkstyle"),
-          ReportingMetaInformation("html", "html", "report")
+        ReportingMetaInformation("plain", "txt", "plain"),
+        ReportingMetaInformation("xml", "xml", "checkstyle"),
+        ReportingMetaInformation("html", "html", "report")
       ).joinToString(separator = ",") {
         val reportId = if (canUseFileEnding) it.fileEnding else it.reportId
         reportId + ":" + File(outputDirectory, "detekt-${it.fileNameSuffix}.${it.fileEnding}").absolutePath
@@ -66,26 +76,26 @@ import java.io.File
       outputDirectory.absolutePath
     }
 
-    project.javaexec { task ->
-      task.main = "io.gitlab.arturbosch.detekt.cli.Main"
-      task.classpath = configuration
-      task.args(
-          "--config", configFile,
-          "--input", project.file("."),
-          "--filters", ".*build/.*",
-          reportKey, reportValue
+    project.javaexec {
+      main = "io.gitlab.arturbosch.detekt.cli.Main"
+      classpath = configuration
+      args(
+        "--config", configFile,
+        "--input", project.file("."),
+        "--filters", ".*build/.*",
+        reportKey, reportValue
       )
 
       if (shouldUseFailFastCliFlag && failFast) {
-        task.args("--fail-fast")
+        args("--fail-fast")
       }
 
       if (shouldCreateBaseLine) {
-        task.args("--create-baseline")
+        args("--create-baseline")
       }
 
       baselineFilePath?.let {
-        task.args("--baseline", it)
+        args("--baseline", it)
       }
     }
   }

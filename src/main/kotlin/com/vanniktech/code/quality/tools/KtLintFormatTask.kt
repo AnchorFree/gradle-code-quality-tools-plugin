@@ -19,14 +19,15 @@ import java.io.File
     description = "Runs ktlint and autoformats your code."
   }
 
-  @TaskAction fun run() {
-    project.javaexec { task ->
-      task.main = "com.github.shyiko.ktlint.Main"
-      task.classpath = project.configurations.getByName("ktlint")
+  @TaskAction
+  fun run() {
+    project.javaexec {
+      main = "com.github.shyiko.ktlint.Main"
+      classpath = project.configurations.getByName("ktlint")
       if (experimental) {
-        task.args("--experimental")
+        args("--experimental")
       }
-      task.args("--reporter=plain", "--reporter=checkstyle,output=${File(outputDirectory, "ktlint-checkstyle-report.xml")}", "-F", "**/*.kt", "**/*.kts", "!build/")
+      args("--reporter=plain", "--reporter=checkstyle,output=${File(outputDirectory, "ktlint-checkstyle-report.xml")}", "-F", "**/*.kt", "**/*.kts", "!build/")
     }
   }
 }
